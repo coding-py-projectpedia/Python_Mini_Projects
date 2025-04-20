@@ -1,0 +1,84 @@
+
+# Import necessary libraries
+import gradio as gr
+import cv2
+import torch
+from torchvision import models, transforms
+from PIL import Image
+import numpy as np
+
+# Load pre-trained model for age and gender prediction (FairFace model can be used here)
+class AgeGenderPredictor:
+    def __init__(self):
+        # Load pre-trained model (you can use models like VGG16, ResNet, etc.)
+        self.model = models.resnet18(pretrained=True)
+        self.model.eval()
+
+        # Define the transformations for the input image
+        self.transform = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+
+    def predict(self, image):
+        # Preprocess the image
+        image_tensor = self.transform(image).unsqueeze(0)
+
+        # Predict using the model
+        with torch.no_grad():
+            outputs = self.model(image_tensor)
+
+        # Assuming the model returns the age and gender (dummy predictions for example)
+        age = int(torch.argmax(outputs[0]) % 100)  # dummy logic for age
+        gender = 'Male' if torch.argmax(outputs[0]) % 2 == 0 else 'Female'  # dummy logic for gender
+
+        return age, gender
+
+# Initialize the Age and Gender Predictor
+predictor = AgeGenderPredictor()
+
+# Function to predict age and gender from an image
+def predict_age_gender(image):
+    try:
+        # Convert PIL image to numpy array for OpenCV processing
+        image_cv = np.array(image)
+        image_cv = cv2.cvtColor(image_cv, cv2.COLOR_RGB2BGR)
+
+        # Detect face using OpenCV (Simple face detection)
+        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+        gray = cv2.cvtColor(image_cv, cv2.COLOR_BGR2GRAY)
+        faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+
+        if len(faces) == 0:
+            return "Error: No face detected.", "Please upload an image with a visible face."
+
+        # Use the first detected face
+        x, y, w, h = faces[0]
+        face = image_cv[y:y+h, x:x+w]
+
+        # Convert the face image to PIL format
+        face_pil = Image.fromarray(cv2.cvtColor(face, cv2.COLOR_BGR2RGB))
+
+        # Predict age and gender
+        age, gender = predictor.predict(face_pil)
+
+        return f"Predicted Age: {age}", f"Predicted Gender: {gender}"
+
+    except Exception as e:
+        return f"Error: {str(e)}", "An error occurred. Please try again."
+
+# Create Gradio interface
+interface = gr.Interface(
+    fn=predict_age_gender,
+    inputs=gr.Image(type="pil", label="Upload Image"),  # Mobile-friendly image upload
+    outputs=[
+        gr.Textbox(label="Age Prediction"),
+        gr.Textbox(label="Gender Prediction")
+    ],
+    title="Age and Gender Prediction",
+    description="This app predicts the age and gender of the person in the image you upload."
+)
+
+# Launch the Gradio interface
+interface.launch(share=True)  # 'share=True' allows you to access the app externally
