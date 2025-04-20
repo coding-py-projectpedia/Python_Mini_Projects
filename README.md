@@ -38,6 +38,22 @@ Learn by doing, the Coding-Py way! 📚
 
 # Projects List 📝
 
+| Project Name | Description |
+|--------------|-------------|
+| 👥 Person Counting and Detection with YOLOv8 | Count and detect people in images using YOLOv8 |
+| 👶 Age and Gender Prediction Using Photo | Predict age and gender from photos |
+| 🌸 Irish Flower Species Classification (NN) | Classify Irish flower species using a neural network |
+| 📊 Sentiment Analysis | Analyze text sentiment: Positive, Neutral, Negative |
+| ✂️ AI Text Summarizer | Create an AI-powered text summarizer in Python |
+| 🏏 IPL Score Prediction | Predict IPL scores using Machine Learning |
+| 🏠 House Price Prediction | Predict house prices with ML algorithms |
+| ✍️ Digit Recognition (MNIST) | Recognize handwritten digits using MNIST dataset |
+| 💬 Smart Chatbot | Build a chatbot for customer support |
+| 🎥 Video Person Detection | Detect and count people in recorded videos |
+| 🔮 AI Horoscope Web App | AI-powered horoscope web application |
+| 📈 Stock Price Prediction | Predict stock prices using LSTM & Neural Networks |
+| 😊 Real-Time Emotion Detector | Detect emotions in real-time from video/image |
+| 🧠 More 50+ AI/ML/DL/Agentic AI projects coming soon | Stay tuned! |
 
 ---
 
