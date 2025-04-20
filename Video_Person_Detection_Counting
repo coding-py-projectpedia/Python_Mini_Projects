@@ -1,0 +1,62 @@
+# Install required dependencies
+!pip install torch torchvision opencv-python gradio ffmpeg-python
+
+import gradio as gr
+import torch
+import cv2
+import os
+
+# Load YOLOv5 model
+model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
+
+# Object detection function
+def object_detection_on_video(video_path):
+    cap = cv2.VideoCapture(video_path)  # Use file path, not file object
+
+    if not cap.isOpened():
+        return "Error: Could not open video.", None
+
+    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+
+    output_file = "output.mp4"
+    out = cv2.VideoWriter(output_file, cv2.VideoWriter_fourcc(*'mp4v'), fps, (frame_width, frame_height))
+
+    total_people_count = 0
+
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        results = model(frame)
+        detected_classes = results.xywh[0][:, -1].cpu().numpy()
+        people_in_frame = (detected_classes == 0).sum()
+        total_people_count += people_in_frame
+
+        frame = results.render()[0]
+        out.write(frame)
+
+    cap.release()
+    out.release()
+
+    os.system(f'ffmpeg -i {output_file} -vcodec libx264 -acodec aac -strict experimental output_converted.mp4')
+
+    return f"Total people detected: {total_people_count}", "output_converted.mp4"
+
+# 🚀 Gradio UI
+with gr.Blocks(theme=gr.themes.Soft()) as demo:
+    gr.Markdown("<h1 style='text-align: center; color: #4A90E2;'>🔍 YOLOv5 Object Detection on Video 🎥</h1>")
+    gr.Markdown("<p style='text-align: center;'>Upload a video, and the model will detect and count people in each frame.</p>")
+
+    with gr.Row():
+        video_input = gr.File(label="Upload Video", type="filepath")  # ✅ Use "filepath"
+        output_text = gr.Textbox(label="Detection Results", interactive=False)
+        output_video = gr.Video(label="Processed Video")
+
+    process_button = gr.Button("Detect Objects 🚀")
+
+    process_button.click(object_detection_on_video, inputs=video_input, outputs=[output_text, output_video])
+
+demo.launch()
