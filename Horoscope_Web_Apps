@@ -1,0 +1,63 @@
+# Install necessary dependencies
+# Run the following in your terminal or Google Colab:
+# pip install gradio requests beautifulsoup4 lxml
+
+import gradio as gr
+import requests
+from bs4 import BeautifulSoup
+from datetime import datetime
+
+# Zodiac sign mapping with corresponding numbers for horoscope.com
+zodiac_mapping = {
+    "Aries": 1, "Taurus": 2, "Gemini": 3, "Cancer": 4,
+    "Leo": 5, "Virgo": 6, "Libra": 7, "Scorpio": 8,
+    "Sagittarius": 9, "Capricorn": 10, "Aquarius": 11, "Pisces": 12
+}
+
+# Determine Zodiac Sign from DOB
+def get_zodiac_sign(dob):
+    month, day = dob.month, dob.day
+    zodiac_dates = [
+        (1, 19, "Capricorn"), (2, 18, "Aquarius"), (3, 20, "Pisces"), (4, 19, "Aries"),
+        (5, 20, "Taurus"), (6, 20, "Gemini"), (7, 22, "Cancer"), (8, 22, "Leo"),
+        (9, 22, "Virgo"), (10, 22, "Libra"), (11, 21, "Scorpio"), (12, 21, "Sagittarius"),
+        (12, 31, "Capricorn")
+    ]
+    for end_month, end_day, sign in zodiac_dates:
+        if (month < end_month) or (month == end_month and day <= end_day):
+            return sign
+    return "Capricorn"
+
+# Function to scrape horoscope.com for daily horoscopes
+def fetch_horoscope(dob_str, day):
+    try:
+        dob = datetime.strptime(dob_str, "%Y-%m-%d")
+    except ValueError:
+        return "❌ Invalid Date! Please enter in YYYY-MM-DD format."
+
+    zodiac_sign = get_zodiac_sign(dob)
+    sign_number = zodiac_mapping[zodiac_sign]
+
+    url = f"https://www.horoscope.com/us/horoscopes/general/horoscope-general-daily-{day}.aspx?sign={sign_number}"
+    response = requests.get(url)
+    soup = BeautifulSoup(response.content, "html.parser")
+
+    horoscope_text = soup.find("div", class_="main-horoscope")
+    if horoscope_text:
+        return f"**🔮 {zodiac_sign} Horoscope for {day.capitalize()}:**\n\n{horoscope_text.p.text}"
+    return "❌ Horoscope not available at the moment."
+
+# Gradio UI
+with gr.Blocks() as iface:
+    gr.Markdown("<h1 style='text-align: center; color: #ff5733;'>🔮 Daily Horoscope</h1>")
+    
+    dob_input = gr.Textbox(label="📅 Enter Your Date of Birth (YYYY-MM-DD)", placeholder="YYYY-MM-DD")
+    day_input = gr.Radio(["yesterday", "today", "tomorrow"], label="🔍 Select the Day", value="today")
+    
+    get_horoscope_btn = gr.Button("🔮 Get Horoscope")
+
+    horoscope_output = gr.Textbox(label="✨ Your Horoscope", interactive=False)
+
+    get_horoscope_btn.click(fetch_horoscope, inputs=[dob_input, day_input], outputs=[horoscope_output])
+
+iface.launch()
