@@ -66,9 +66,9 @@ git clone https://github.com/coding-py-projectpedia/python-mini-projects.git
 For video tutorials, in-depth project explanations, and more Python projects, be sure to subscribe to Coding-Py on YouTube.
 Join a community of learners and grow your Python skills with real-world projects! 🎥🔧
 
+Direct link: https://www.youtube.com/@coding-py
+
 For any queries or feedback, feel free to reach out to contact.codingpy@gmail.com. 📩
-
-
 ---
 
 # Contribute 🤝
