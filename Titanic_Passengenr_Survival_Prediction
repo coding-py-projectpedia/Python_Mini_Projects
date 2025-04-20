@@ -1,0 +1,84 @@
+# Install these before running the code:
+!pip install kaggle --quiet
+!pip install gradio --quiet
+!pip install scikit-learn --quiet
+!pip install pandas --quiet
+
+# ------------------- CODE 1: Download Titanic Dataset from Kaggle -------------------
+import os
+import pandas as pd
+from kaggle.api.kaggle_api_extended import KaggleApi
+
+# Step 1: Set Kaggle API Credentials
+os.environ["KAGGLE_USERNAME"] = "mojammil" # Modify Here: Paste Your Own: Username
+os.environ["KAGGLE_KEY"] = "71f82e9e5e4c2756be5db1f9f9876308" # Modify: Paste Your own key
+
+# Step 2: Authenticate Kaggle API
+api = KaggleApi()
+api.authenticate()
+
+# Step 3: Download and extract dataset
+dataset = "ashishkumarjayswal/titanic-datasets"
+api.dataset_download_files(dataset, path="./", unzip=True)
+
+# Step 4: Find and load the preferred CSV file
+csv_files = [file for file in os.listdir("./") if file.endswith('.csv')]
+preferred_files = ['train.csv', 'test.csv', 'titanic.csv', 'data.csv']
+csv_file = next((file for file in preferred_files if file in csv_files), csv_files[0])
+df = pd.read_csv(csv_file)
+
+# ------------------- CODE 2: ML Model + Gradio Web App -------------------
+import joblib
+import gradio as gr
+from sklearn.preprocessing import LabelEncoder
+from sklearn.linear_model import LogisticRegression
+
+model_file = "titanic_model.pkl"
+
+# Step 1: Data Preprocessing
+df = df[['Survived', 'Pclass', 'Sex', 'Age', 'SibSp', 'Parch', 'Fare']].dropna()
+df['Sex'] = LabelEncoder().fit_transform(df['Sex'])
+X = df.drop(columns=['Survived'])
+y = df['Survived']
+
+# Step 2: Load or Train Model
+if os.path.exists(model_file):
+    print("✅ Loading trained model...")
+    model = joblib.load(model_file)
+else:
+    print("⚡ Training new model...")
+    model = LogisticRegression()
+    model.fit(X, y)
+    joblib.dump(model, model_file)
+
+print("✅ Model is ready!")
+
+# Step 3: Define Prediction Function
+def predict_survival(Pclass, Sex, Age, SibSp, Parch, Fare):
+    try:
+        sex_encoded = 1 if Sex.lower() == "male" else 0
+        input_data = pd.DataFrame([[int(Pclass), sex_encoded, Age, SibSp, Parch, Fare]],
+                                  columns=['Pclass', 'Sex', 'Age', 'SibSp', 'Parch', 'Fare'])
+        survival_probability = model.predict_proba(input_data)[0][1] * 100
+        return f"🚢 Survival Probability: {survival_probability:.2f}%"
+    except Exception as e:
+        return "⚠️ Error in prediction!"
+
+# Step 4: Build Gradio UI
+with gr.Blocks() as demo:
+    gr.Markdown("## 🛳 Titanic Survival Prediction 🚢")
+
+    Pclass = gr.Radio(["1", "2", "3"], label="Passenger Class")
+    Sex = gr.Radio(["Male", "Female"], label="Sex")
+    Age = gr.Slider(1, 80, value=30, label="Age")
+    SibSp = gr.Number(value=0, label="Siblings/Spouses Aboard")
+    Parch = gr.Number(value=0, label="Parents/Children Aboard")
+    Fare = gr.Slider(0, 500, value=50, label="Fare")
+
+    btn = gr.Button("🔮 Predict")
+    output = gr.Textbox(label="Prediction")
+
+    btn.click(predict_survival, inputs=[Pclass, Sex, Age, SibSp, Parch, Fare], outputs=output)
+
+print("🚀 Gradio App Ready! Launching now...")
+demo.launch(share=True)
