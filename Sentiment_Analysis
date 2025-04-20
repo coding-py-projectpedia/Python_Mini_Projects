@@ -1,0 +1,43 @@
+# Install the required libraries (uncomment if running in Colab)
+# !pip install gradio transformers
+
+import gradio as gr
+from transformers import pipeline
+
+# Load pre-trained sentiment analysis model
+classifier = pipeline("sentiment-analysis")
+
+# Function to classify sentiment
+def classify_sentiment(text):
+    result = classifier(text)[0]
+    label = result['label']
+    if label == "POSITIVE":
+        sentiment = "✅ Positive 😊"
+    elif label == "NEGATIVE":
+        sentiment = "❌ Negative 😞"
+    else:
+        sentiment = "⚖️ Neutral 😐"
+    return f"Sentiment: {sentiment}"
+
+# Create Gradio interface with emojis
+interface = gr.Interface(
+    fn=classify_sentiment,
+    inputs=gr.Textbox(
+        lines=3,
+        placeholder="✍️ Type something like 'I love this product!'",
+        label="📝 Your Text Here",
+        interactive=True
+    ),
+    outputs=gr.Textbox(
+        label="📊 AI-Predicted Sentiment",
+        interactive=False
+    ),
+    title="🤖 AI Sentiment Analyzer",
+    description="🔍 Analyze the sentiment of any text using Hugging Face Transformers. Get instant feedback: 😊 Positive, 😞 Negative, or 😐 Neutral.",
+    theme="compact",
+    allow_flagging="never",
+    live=True
+)
+
+# Launch the app
+interface.launch()
