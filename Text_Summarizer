@@ -1,0 +1,30 @@
+# Step 1: Install Required Libraries
+!pip install transformers gradio --quiet
+
+# Step 2: Import Necessary Libraries
+from transformers import pipeline
+import gradio as gr
+
+# Step 3: Load Pretrained Summarizer Model (facebook/bart-large-cnn)
+summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
+
+# Step 4: Define Summarization Function
+def summarize_text(text):
+    if len(text.strip()) == 0:
+        return "⚠️ Please enter some text to summarize!"
+    
+    summary = summarizer(text, max_length=130, min_length=30, do_sample=False)
+    return "✨ **Summary:**\n\n" + summary[0]['summary_text']
+
+# Step 5: Build Gradio Interface with Emojis
+interface = gr.Interface(
+    fn=summarize_text,
+    inputs=gr.Textbox(lines=15, label="📝 Enter Your Text Here"),
+    outputs=gr.Textbox(label="📄 Generated Summary"),
+    title="🧠 Text Summarizer | Python Mini Project 5",
+    description="Boost your productivity by turning long texts into short summaries using AI! 🚀\n\nMade with **Python + Transformers + Gradio**.",
+    theme="soft"
+)
+
+# Step 6: Launch the Gradio App
+interface.launch()
