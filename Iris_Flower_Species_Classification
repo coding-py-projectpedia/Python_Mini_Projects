@@ -1,0 +1,105 @@
+# ================================
+# 📦 PREREQUISITES
+# ================================
+# If running in a fresh environment (like Google Colab), install required libraries using:
+# !pip install gradio tensorflow scikit-learn pandas
+
+# ================================
+# 🔍 IMPORT REQUIRED LIBRARIES
+# ================================
+import gradio as gr
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelBinarizer, StandardScaler
+
+# ================================
+# 📊 LOAD AND DISPLAY IRIS DATASET
+# ================================
+iris = load_iris()
+X = iris.data
+y = iris.target
+target_names = iris.target_names  # ['setosa', 'versicolor', 'virginica']
+
+# Convert to DataFrame for preview
+df = pd.DataFrame(X, columns=iris.feature_names)
+df['species'] = [target_names[i] for i in y]
+
+# Display top 5 rows
+print("🔹 Top 5 Rows of the Iris Dataset:")
+print(df.head())
+
+# ================================
+# ⚙️ PREPROCESSING
+# ================================
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+lb = LabelBinarizer()
+y_encoded = lb.fit_transform(y)
+
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y_encoded, test_size=0.2, random_state=42)
+
+# ================================
+# 🧠 BUILD ANN MODEL
+# ================================
+model = tf.keras.models.Sequential([
+    tf.keras.layers.Dense(10, activation='relu', input_shape=(4,)),
+    tf.keras.layers.Dense(10, activation='relu'),
+    tf.keras.layers.Dense(3, activation='softmax')  # Output: 3 classes
+])
+
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+# Train the model
+model.fit(X_train, y_train, epochs=100, verbose=0)
+
+# ================================
+# 🔍 DEFINE PREDICTION FUNCTION
+# ================================
+def predict_iris(sepal_length, sepal_width, petal_length, petal_width):
+    features = np.array([[sepal_length, sepal_width, petal_length, petal_width]])
+    features_scaled = scaler.transform(features)
+    prediction = model.predict(features_scaled)
+    predicted_index = np.argmax(prediction)
+    species = target_names[predicted_index]
+    return f"🌸 Predicted Iris Species: {species}"
+
+# ================================
+# 🎨 OPTIONAL: BACKGROUND STYLING
+# ================================
+custom_css = """
+<style>
+body {
+    background: url('https://upload.wikimedia.org/wikipedia/commons/4/41/Iris_versicolor_3.jpg') no-repeat center center fixed;
+    background-size: cover;
+}
+</style>
+"""
+
+# ================================
+# 🌐 GRADIO INTERFACE
+# ================================
+iface = gr.Interface(
+    fn=predict_iris,
+    inputs=[
+        gr.Number(label="🌿 Sepal Length (cm)"),
+        gr.Number(label="🌿 Sepal Width (cm)"),
+        gr.Number(label="🌸 Petal Length (cm)"),
+        gr.Number(label="🌸 Petal Width (cm)"),
+    ],
+    outputs="text",
+    title="🌺 Iris Flower Classification (ANN)",
+    description="🌼 Enter the flower measurements and let the AI predict the Iris species!",
+    theme="compact",
+)
+
+# ================================
+# 🚀 LAUNCH APP
+# ================================
+iface.launch(share=True)
+
+# (Optional in notebooks) display background styling
+print(custom_css)
