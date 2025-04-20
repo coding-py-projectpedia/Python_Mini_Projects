@@ -1,0 +1,72 @@
+# Step 1: Install required libraries (run in Colab)
+!pip install yfinance pandas gradio scikit-learn matplotlib tensorflow
+
+# Step 2: Import libraries
+import yfinance as yf
+import pandas as pd
+import numpy as np
+import gradio as gr
+import matplotlib.pyplot as plt
+
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, LSTM
+
+# Step 3: Define stock list
+stock_options = ['AAPL 📱', 'GOOGL 🌐', 'MSFT 💻', 'TSLA 🚗', 'AMZN 📦']
+
+# Step 4: Function to fetch and process stock data
+def get_stock_data(ticker):
+    df = yf.download(ticker, period='5y')
+    data = df[['Close']]
+    data.dropna(inplace=True)
+
+    # Normalize data
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    scaled_data = scaler.fit_transform(data)
+
+    # Prepare sequences
+    X, y = [], []
+    for i in range(60, len(scaled_data)):
+        X.append(scaled_data[i-60:i, 0])
+        y.append(scaled_data[i, 0])
+    X, y = np.array(X), np.array(y)
+    X = np.reshape(X, (X.shape[0], X.shape[1], 1))
+
+    # LSTM model
+    model = Sequential()
+    model.add(LSTM(units=50, return_sequences=True, input_shape=(X.shape[1], 1)))
+    model.add(LSTM(units=50))
+    model.add(Dense(1))
+    model.compile(optimizer='adam', loss='mean_squared_error')
+    model.fit(X, y, epochs=5, batch_size=32, verbose=0)
+
+    # Predict next day
+    last_60_days = scaled_data[-60:]
+    last_60_days = np.reshape(last_60_days, (1, 60, 1))
+    prediction = model.predict(last_60_days)
+    predicted_price = scaler.inverse_transform(prediction)[0][0]
+
+    # Plot
+    plt.figure(figsize=(8, 4))
+    plt.plot(data.index[-100:], data['Close'][-100:], label="Actual Price")
+    plt.axhline(y=predicted_price, color='r', linestyle='--', label="Predicted Next Price")
+    plt.title(f"{ticker} - Last 100 Days & Next Prediction")
+    plt.xlabel("Date")
+    plt.ylabel("Price")
+    plt.legend()
+    plt.tight_layout()
+
+    return predicted_price, plt
+
+# Step 5: Gradio UI
+def app(ticker):
+    price, plot = get_stock_data(ticker)
+    return f"Predicted next closing price: ${price:.2f} 💰", plot
+
+gr.Interface(fn=app,
+             inputs=gr.Dropdown(choices=stock_options, label="Select a Stock 📊"),
+             outputs=["text", "plot"],
+             title="Stock Price Prediction 📈💹",
+             description="Pick a stock to view predicted next closing price using LSTM model. 📉💼"
+).launch()
