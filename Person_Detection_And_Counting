@@ -1,0 +1,69 @@
+
+import gradio as gr
+import cv2
+from ultralytics import YOLO
+import numpy as np
+
+# Load the pre-trained YOLO model
+model = YOLO('yolov8n.pt')  # You can use other YOLO models (e.g., yolov8s.pt) for better accuracy
+
+# Function for object detection and counting
+def detect_and_count_objects(image, object_name="person"):
+    # Convert the image to RGB (required for YOLO)
+    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+    # Run the object detection model
+    results = model(image_rgb)
+
+    # Extract bounding boxes, labels, and confidences
+    detections = results[0].boxes
+    detected_objects = []
+
+    for box in detections:
+        label = results[0].names[int(box.cls[0])]  # Class label
+        if label == object_name:
+            detected_objects.append(box)
+
+    # Annotate the image with bounding boxes
+    for box in detected_objects:
+        x1, y1, x2, y2 = map(int, box.xyxy[0].numpy())
+        confidence = box.conf[0].numpy()
+        cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        cv2.putText(
+            image,
+            f"{object_name} {confidence:.2f}",
+            (x1, y1 - 10),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            (0, 255, 0),
+            2,
+        )
+
+    # Count the objects
+    object_count = len(detected_objects)
+
+
+    return image, f"Detected {object_count} {object_name}(s)"
+# Gradio Interface
+def process_image(image, object_name):
+    image = np.array(image)
+    annotated_image, count_message = detect_and_count_objects(image, object_name)
+    return annotated_image, count_message
+
+# Create Gradio UI
+interface = gr.Interface(
+    fn=process_image,
+    inputs=[
+        gr.Image(type="numpy", label="Upload an Image"),
+        gr.Textbox(value="person", label="Object to Detect (e.g., person, car, etc.)"),
+    ],
+    outputs=[
+        gr.Image(type="numpy", label="Annotated Image"),
+        gr.Textbox(label="Count Result"),
+    ],
+    title="Object Counting in Images",
+    description="Upload an image and specify the object to detect. The app will count the number of specified objects in the image.",
+)
+
+# Launch the app
+interface.launch()
