@@ -1,0 +1,106 @@
+# 📌 Step 1: Install Dependencies
+!pip install gradio scikit-learn pandas matplotlib seaborn
+
+# 📌 Step 2: Upload CSV File
+from google.colab import files
+uploaded = files.upload()
+
+# 📌 Step 3: Load and Explore the Dataset
+import pandas as pd
+
+df = pd.read_csv('ipl_data.csv')
+print("✅ Dataset Loaded!")
+print(df.head())
+
+# 📌 Step 4: Preprocessing
+consistent_teams = [
+    'Chennai Super Kings', 'Delhi Capitals', 'Kings XI Punjab',
+    'Kolkata Knight Riders', 'Mumbai Indians', 'Rajasthan Royals',
+    'Royal Challengers Bangalore', 'Sunrisers Hyderabad'
+]
+
+df = df[df['bat_team'].isin(consistent_teams) & df['bowl_team'].isin(consistent_teams)]
+
+# One-hot encoding
+df_encoded = pd.get_dummies(df[['bat_team', 'bowl_team', 'venue']], drop_first=True)
+
+# Numerical features
+numerical_features = df[['runs', 'wickets', 'overs', 'runs_last_5', 'wickets_last_5', 'striker', 'non-striker']]
+X = pd.concat([df_encoded, numerical_features], axis=1)
+y = df['total']
+
+# 📌 Step 5: Train-Test Split
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+print(f"✅ Training Samples: {len(X_train)}, Testing Samples: {len(X_test)}")
+
+# 📌 Step 6: Train Random Forest Regressor (manually tuned)
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error, r2_score
+
+rf_model = RandomForestRegressor(
+    n_estimators=100,
+    max_depth=20,
+    min_samples_split=3,
+    random_state=42
+)
+rf_model.fit(X_train, y_train)
+
+# 📌 Step 7: Evaluate Model
+y_pred = rf_model.predict(X_test)
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print(f"✅ Random Forest MSE: {mse:.2f}")
+print(f"✅ R² Score: {r2:.2f}")
+
+# 📌 Step 8: Build Stylish Gradio UI with Emojis
+import gradio as gr
+
+def predict_score(bat_team, bowl_team, venue, runs, wickets, overs, runs_last_5, wickets_last_5, striker, non_striker):
+    input_dict = {
+        'runs': runs,
+        'wickets': wickets,
+        'overs': overs,
+        'runs_last_5': runs_last_5,
+        'wickets_last_5': wickets_last_5,
+        'striker': striker,
+        'non-striker': non_striker
+    }
+
+    teams_venues = pd.get_dummies(pd.DataFrame([[bat_team, bowl_team, venue]],
+                                                columns=['bat_team', 'bowl_team', 'venue']))
+    
+    all_columns = pd.get_dummies(df[['bat_team', 'bowl_team', 'venue']], drop_first=True).columns
+    for col in all_columns:
+        input_dict[col] = 1 if col in teams_venues.columns and teams_venues[col].iloc[0] == 1 else 0
+
+    input_df = pd.DataFrame([input_dict])
+    prediction = rf_model.predict(input_df)[0]
+    return f"🏏 Predicted Final Score: **{int(prediction)}** runs!"
+
+# Lists for dropdowns
+bat_teams = sorted(df['bat_team'].unique().tolist())
+bowl_teams = sorted(df['bowl_team'].unique().tolist())
+venues = sorted(df['venue'].unique().tolist())
+
+# Launch Gradio App
+gr.Interface(
+    fn=predict_score,
+    inputs=[
+        gr.Dropdown(bat_teams, label="🏏 Batting Team"),
+        gr.Dropdown(bowl_teams, label="🎯 Bowling Team"),
+        gr.Dropdown(venues, label="📍 Venue"),
+        gr.Number(label="🏃‍♂️ Runs Scored"),
+        gr.Number(label="💔 Wickets Fallen"),
+        gr.Number(label="🕒 Overs Completed"),
+        gr.Number(label="🔥 Runs in Last 5 Overs"),
+        gr.Number(label="🚨 Wickets in Last 5 Overs"),
+        gr.Number(label="👤 Striker Score"),
+        gr.Number(label="🤝 Non-Striker Score"),
+    ],
+    outputs=gr.Textbox(label="🎯 Prediction Result"),
+    title="🏆 IPL Final Score Predictor",
+    description="Use this AI tool to predict the **final score** of an IPL match based on real-time match stats. Just fill in the match details and hit **Submit**!",
+    theme="default"
+).launch()
