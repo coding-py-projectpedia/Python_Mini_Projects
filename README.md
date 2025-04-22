@@ -1,7 +1,7 @@
 # Python Mini Projects 🚀
 
 Welcome to the Python Mini Projects collection by Coding-Py!
-This repository contains beginner-friendly Python projects, ranging from basic applications to AI/ML/DL projects. Each project is designed to help you learn by building real-world applications. 🧑‍💻✨
+This repository contains beginner-friendly Python projects, ranging from basic applications to AI/ML/DL/AGENTIC_AI projects. Each project is designed to help you learn by building real-world applications. 🧑‍💻✨
 
 
 ---
