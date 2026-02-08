@@ -1,0 +1,119 @@
+
+# ================================
+# STEP 1: Install libraries
+# ================================
+!pip install nltk gradio
+
+
+# ================================
+# STEP 2: Imports
+# ================================
+import nltk
+import random
+import gradio as gr
+from nltk.corpus import stopwords
+from collections import Counter
+
+
+# ================================
+# STEP 3: Download ONLY required NLTK data
+# ================================
+nltk.download("punkt")
+nltk.download("punkt_tab")   # required in new NLTK
+nltk.download("stopwords")
+
+
+# ================================
+# STEP 4: Clean & tokenize text
+# ================================
+def preprocess(text):
+    tokens = nltk.word_tokenize(text.lower())
+    stop_words = set(stopwords.words("english"))
+    words = [w for w in tokens if w.isalpha() and w not in stop_words]
+    return words
+
+
+# ================================
+# STEP 5: Get important words (frequency-based NLP)
+# ================================
+def get_keywords(words, top_n=10):
+    freq = Counter(words)
+    keywords = [word for word, _ in freq.most_common(top_n)]
+    return keywords
+
+
+# ================================
+# STEP 6: Generate 3 MCQs (SAFE & CORRECT)
+# ================================
+def generate_mcqs(text):
+    try:
+        if not text or not text.strip():
+            return "❌ Please enter a valid paragraph."
+
+        sentences = nltk.sent_tokenize(text)
+        words = preprocess(text)
+
+        # keep only meaningful words (length >= 4)
+        keywords = [w for w in get_keywords(words, top_n=20) if len(w) >= 4]
+
+        if len(sentences) < 3 or len(keywords) < 4:
+            return "❌ Please enter a longer educational paragraph."
+
+        output = ""
+        count = 0
+
+        for sentence in sentences:
+            sentence_lower = sentence.lower()
+
+            # choose only keywords present in sentence
+            candidates = [k for k in keywords if k in sentence_lower]
+
+            if not candidates:
+                continue
+
+            # prefer longer, meaningful word as answer
+            answer = max(candidates, key=len)
+
+            question = sentence.replace(answer, "______", 1)
+
+            # create good options
+            options_pool = [k for k in keywords if k != answer]
+            options = random.sample(options_pool, 3)
+            options.append(answer)
+            random.shuffle(options)
+
+            count += 1
+            output += f"🧠 Q{count}: {question}\n"
+            for opt in options:
+                output += f"🔹 {opt}\n"
+            output += f"✅ Answer: {answer}\n"
+            output += "-" * 40 + "\n"
+
+            if count == 3:
+                break
+
+        if count < 3:
+            return "❌ Not enough meaningful content to generate MCQs."
+
+        return output
+
+    except Exception as e:
+        return f"❌ Internal error occurred.\nDetails: {str(e)}"
+
+
+# ================================
+# STEP 7: Gradio UI
+# ================================
+interface = gr.Interface(
+    fn=generate_mcqs,
+    inputs=gr.Textbox(
+        lines=8,
+        placeholder="📘 Enter an educational paragraph here..."
+    ),
+    outputs=gr.Textbox(label="🎯 Generated MCQs"),
+    title="📚 Simple MCQ Generator using NLP",
+    description="✨ Frequency-based NLP | Beginner Friendly | Coding-Py",
+    theme="soft"
+)
+
+interface.launch()
